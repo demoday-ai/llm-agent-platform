@@ -217,7 +217,16 @@ async def run(body: RunRequest) -> RunResponse:
 
         tool_calls = message.get("tool_calls")
         if not tool_calls:
-            content = message.get("content", "")
+            content = message.get("content") or ""
+            # If content is empty after tool use, ask LLM to summarize
+            if not content.strip() and tools_used:
+                _sessions[session_id].append(
+                    {
+                        "role": "user",
+                        "content": "Please summarize based on the tool results.",
+                    },
+                )
+                continue
             _sessions[session_id].append({"role": "assistant", "content": content})
 
             if trace is not None:

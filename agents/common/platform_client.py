@@ -106,6 +106,15 @@ class PlatformClient:
             json=payload,
             headers=headers,
         )
+        if resp.status_code == 401:
+            logger.warning("Got 401, re-registering agent '%s'", self._agent_name)
+            await self.register()
+            headers = {"Authorization": f"Bearer {self._agent_token}"}
+            resp = await self._client.post(
+                f"{self._platform_url}/v1/chat/completions",
+                json=payload,
+                headers=headers,
+            )
         resp.raise_for_status()
         return resp.json()
 

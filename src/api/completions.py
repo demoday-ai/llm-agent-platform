@@ -20,12 +20,15 @@ from src.balancer.router import model_router
 from src.core.config import settings
 from src.providers.openrouter import OpenRouterClient, UpstreamError
 from src.schemas.openai import ChatCompletionRequest  # noqa: TC001
+from src.telemetry.langfuse_tracer import trace_llm_call
 from src.telemetry.metrics import (
     llm_request_cost_total,
     llm_request_duration_seconds,
     llm_requests_total,
     llm_tokens_input_total,
     llm_tokens_output_total,
+    llm_tpot_seconds,
+    llm_ttft_seconds,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,7 +84,13 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
 
     if request.stream:
         return StreamingResponse(
-            _safe_stream(result, client),  # type: ignore[arg-type]
+            _safe_stream(
+                result,  # type: ignore[arg-type]
+                client,
+                model=request.model,
+                provider_name=provider.name,
+                t_start=t_start,
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -95,6 +104,18 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
 
     _record_metrics(request.model, provider.name, 200, duration, response_content)
 
+    usage = response_content.get("usage", {})
+    trace_llm_call(
+        model=request.model,
+        messages=messages,
+        response=_extract_response_text(response_content),
+        duration=duration,
+        tokens_in=usage.get("prompt_tokens", 0),
+        tokens_out=usage.get("completion_tokens", 0),
+        cost=usage.get("cost", 0),
+        provider=provider.name,
+    )
+
     text = _extract_response_text(response_content)
     if text:
         masked_text, flagged = await pipeline.check_response(text)
@@ -107,21 +128,59 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
 async def _safe_stream(
     source: AsyncIterator[bytes],
     client: OpenRouterClient,
+    *,
+    model: str,
+    provider_name: str,
+    t_start: float,
 ) -> AsyncIterator[bytes]:
-    """Wrap upstream stream; close client when done."""
+    """Wrap upstream stream; close client when done.
+
+    Records TTFT (time to first token), TPOT (time per output token),
+    total duration, and request count for streaming responses.
+
+    NOTE: secret-leak guardrail is NOT applied to streaming responses.
+    This is a known limitation - chunked SSE data cannot be reliably
+    checked until the full response is assembled.
+    """
+    chunk_count = 0
+    first_chunk_time: float | None = None
+    last_chunk_time = t_start
+    status = 200
     try:
         async for chunk in source:
+            now = time.monotonic()
+            if first_chunk_time is None:
+                first_chunk_time = now
+                llm_ttft_seconds.labels(model=model, provider=provider_name).observe(
+                    first_chunk_time - t_start,
+                )
+            else:
+                llm_tpot_seconds.labels(model=model, provider=provider_name).observe(
+                    now - last_chunk_time,
+                )
+            last_chunk_time = now
+            chunk_count += 1
             yield chunk
     except UpstreamError as exc:
+        status = exc.status_code
         error_payload = {"error": {"message": exc.detail, "code": exc.status_code}}
         yield f"data: {json.dumps(error_payload)}\n\n".encode()
     except httpx.TimeoutException:
+        status = 504
         error_payload = {"error": {"message": "Upstream timeout", "code": 504}}
         yield f"data: {json.dumps(error_payload)}\n\n".encode()
     except httpx.ConnectError:
+        status = 502
         error_payload = {"error": {"message": "Cannot connect to upstream", "code": 502}}
         yield f"data: {json.dumps(error_payload)}\n\n".encode()
     finally:
+        duration = time.monotonic() - t_start
+        llm_requests_total.labels(
+            model=model, provider=provider_name, status_code=str(status),
+        ).inc()
+        llm_request_duration_seconds.labels(
+            model=model, provider=provider_name,
+        ).observe(duration)
         await client.close()
 
 
