@@ -4,7 +4,7 @@
   "tags": ["llm", "platform"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": {
     "from": "now-1h",
@@ -111,6 +111,80 @@
         {
           "expr": "sum(increase(llm_request_cost_total[5m])) by (model)",
           "legendFormat": "{{ model }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "TTFT - Time to First Token (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(llm_ttft_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p50 {{ provider }}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_ttft_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p95 {{ provider }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "TPOT - Time per Output Token (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(llm_tpot_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p50 {{ provider }}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_tpot_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p95 {{ provider }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Circuit Breaker Status",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "CLOSED", "color": "green" } }, "type": "value" },
+            { "options": { "1": { "text": "OPEN", "color": "red" } }, "type": "value" },
+            { "options": { "2": { "text": "HALF_OPEN", "color": "yellow" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "llm_circuit_breaker_state",
+          "legendFormat": "{{ provider }}",
           "refId": "A"
         }
       ]

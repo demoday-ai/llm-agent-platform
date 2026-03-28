@@ -47,3 +47,15 @@ llm_overhead_duration_seconds = Histogram(
     "Platform overhead only (excluding upstream LLM latency)",
     ["model"],
 )
+
+llm_ttft_seconds = Histogram(
+    "llm_ttft_seconds",
+    "Time to first token",
+    ["model", "provider"],
+)
+
+llm_tpot_seconds = Histogram(
+    "llm_tpot_seconds",
+    "Time per output token",
+    ["model", "provider"],
+)
