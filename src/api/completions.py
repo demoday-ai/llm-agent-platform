@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import TYPE_CHECKING
 
 import httpx
@@ -19,6 +20,13 @@ from src.balancer.router import model_router
 from src.core.config import settings
 from src.providers.openrouter import OpenRouterClient, UpstreamError
 from src.schemas.openai import ChatCompletionRequest  # noqa: TC001
+from src.telemetry.metrics import (
+    llm_request_cost_total,
+    llm_request_duration_seconds,
+    llm_requests_total,
+    llm_tokens_input_total,
+    llm_tokens_output_total,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +53,7 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
 
     api_key = provider.api_key or settings.OPENROUTER_API_KEY
     client = OpenRouterClient(base_url=provider.base_url, api_key=api_key)
+    t_start = time.monotonic()
 
     kwargs = {}
     for field in ("temperature", "max_tokens", "top_p", "frequency_penalty",
@@ -81,7 +90,11 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
         )
 
     await client.close()
+    duration = time.monotonic() - t_start
     response_content: dict = result  # type: ignore[assignment]
+
+    _record_metrics(request.model, provider.name, 200, duration, response_content)
+
     text = _extract_response_text(response_content)
     if text:
         masked_text, flagged = await pipeline.check_response(text)
@@ -118,6 +131,25 @@ def _map_upstream_error(exc: UpstreamError) -> HTTPException:
     if exc.status_code >= 500:
         return HTTPException(status_code=502, detail="Upstream server error")
     return HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+def _record_metrics(
+    model: str, provider: str, status: int, duration: float, response: dict,
+) -> None:
+    """Record Prometheus metrics from a completed LLM request."""
+    llm_requests_total.labels(model=model, provider=provider, status_code=str(status)).inc()
+    llm_request_duration_seconds.labels(model=model, provider=provider).observe(duration)
+    usage = response.get("usage", {})
+    if usage:
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        cost = usage.get("cost", 0)
+        if prompt_tokens:
+            llm_tokens_input_total.labels(model=model).inc(prompt_tokens)
+        if completion_tokens:
+            llm_tokens_output_total.labels(model=model).inc(completion_tokens)
+        if cost:
+            llm_request_cost_total.labels(model=model, provider=provider).inc(cost)
 
 
 def _extract_response_text(response: dict) -> str:
