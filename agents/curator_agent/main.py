@@ -6,15 +6,17 @@ import json
 import logging
 import os
 import uuid
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI
 from langfuse import Langfuse
 from pydantic import BaseModel
 
 from agents.common.platform_client import PlatformClient
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -142,7 +144,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         platform_url=os.getenv("PLATFORM_URL", "http://app:8000"),
         master_token=os.getenv("MASTER_TOKEN", ""),
         agent_name="curator-agent",
-        agent_description="DemoDay curator agent with tool use (compare, summarize, suggest_questions)",
+        agent_description=(
+            "DemoDay curator agent with tool use"
+            " (compare, summarize, suggest_questions)"
+        ),
         methods=["run"],
         endpoint_url="http://curator-agent:8002",
     )

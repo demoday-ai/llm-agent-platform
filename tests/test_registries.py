@@ -7,8 +7,7 @@ from unittest.mock import patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.providers.models import Provider
-from src.providers.registry import ProviderRegistry, provider_registry
+from src.providers.registry import provider_registry
 from src.registry.agent_registry import AgentRegistry
 from src.schemas.agent import AgentCreate
 

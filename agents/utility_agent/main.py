@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from fastapi import FastAPI
 from langfuse import Langfuse
 from pydantic import BaseModel
 
 from agents.common.platform_client import PlatformClient
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,8 +23,14 @@ MODEL = "stepfun/step-3.5-flash"
 
 _TASK_PROMPTS: dict[str, str] = {
     "summarize": "Summarize the following text concisely, preserving key points:\n\n",
-    "translate": "Translate the following text to English. If already in English, translate to Russian:\n\n",
-    "analyze": "Analyze the following text. Identify key themes, sentiment, and provide brief insights:\n\n",
+    "translate": (
+        "Translate the following text to English."
+        " If already in English, translate to Russian:\n\n"
+    ),
+    "analyze": (
+        "Analyze the following text. Identify key themes,"
+        " sentiment, and provide brief insights:\n\n"
+    ),
 }
 
 _platform: PlatformClient | None = None

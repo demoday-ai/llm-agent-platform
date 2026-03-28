@@ -10,6 +10,8 @@ import httpx
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+import contextlib
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -126,8 +128,6 @@ def _replace_response_text(response: dict, new_text: str) -> dict:
     """Return a copy of the response with the first choice's content replaced."""
     import copy  # noqa: PLC0415
     result = copy.deepcopy(response)
-    try:
+    with contextlib.suppress(IndexError, KeyError, TypeError):
         result["choices"][0]["message"]["content"] = new_text
-    except (IndexError, KeyError, TypeError):
-        pass
     return result

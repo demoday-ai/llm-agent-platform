@@ -5,15 +5,17 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI
 from langfuse import Langfuse
 from pydantic import BaseModel
 
 from agents.common.platform_client import PlatformClient
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

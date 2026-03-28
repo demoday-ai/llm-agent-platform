@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from src.guardrails.base import Guardrail, GuardrailResult
 from src.guardrails.secret_leak import mask_secrets
+
+if TYPE_CHECKING:
+    from src.guardrails.base import Guardrail, GuardrailResult
 
 logger = logging.getLogger(__name__)
 

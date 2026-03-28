@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.schemas.agent import Agent, AgentCreate
 
@@ -28,7 +28,7 @@ class AgentRegistry:
                 methods=list(agent.methods),
                 endpoint_url=agent.endpoint_url,
                 token=secrets.token_urlsafe(32),
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self._agents[new_id] = registered
             return registered

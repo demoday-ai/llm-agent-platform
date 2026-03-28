@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import Response
 
 from src.auth.token_store import validate_token
+
+if TYPE_CHECKING:
+    from fastapi import Request
+    from starlette.responses import Response
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +68,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 )
                 return JSONResponse(
                     status_code=403,
-                    content={"detail": "Forbidden: agent tokens can only access /v1/chat/completions"},
+                    content={
+                        "detail": "Forbidden: agent tokens can only access /v1/chat/completions",
+                    },
                 )
 
         request.state.token_info = token_info
