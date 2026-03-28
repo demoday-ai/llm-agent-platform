@@ -61,17 +61,18 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
             **kwargs,
         )
     except UpstreamError as exc:
+        await client.close()
         raise _map_upstream_error(exc) from exc
     except httpx.TimeoutException as exc:
+        await client.close()
         raise HTTPException(status_code=504, detail="Upstream timeout") from exc
     except httpx.ConnectError as exc:
-        raise HTTPException(status_code=502, detail="Cannot connect to upstream") from exc
-    finally:
         await client.close()
+        raise HTTPException(status_code=502, detail="Cannot connect to upstream") from exc
 
     if request.stream:
         return StreamingResponse(
-            _safe_stream(result),  # type: ignore[arg-type]
+            _safe_stream(result, client),  # type: ignore[arg-type]
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -79,6 +80,7 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
             },
         )
 
+    await client.close()
     response_content: dict = result  # type: ignore[assignment]
     text = _extract_response_text(response_content)
     if text:
@@ -89,8 +91,11 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
     return JSONResponse(content=response_content)
 
 
-async def _safe_stream(source: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
-    """Wrap upstream stream to convert errors into SSE error events."""
+async def _safe_stream(
+    source: AsyncIterator[bytes],
+    client: OpenRouterClient,
+) -> AsyncIterator[bytes]:
+    """Wrap upstream stream; close client when done."""
     try:
         async for chunk in source:
             yield chunk
@@ -103,6 +108,8 @@ async def _safe_stream(source: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
     except httpx.ConnectError:
         error_payload = {"error": {"message": "Cannot connect to upstream", "code": 502}}
         yield f"data: {json.dumps(error_payload)}\n\n".encode()
+    finally:
+        await client.close()
 
 
 def _map_upstream_error(exc: UpstreamError) -> HTTPException:
