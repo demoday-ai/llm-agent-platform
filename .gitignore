@@ -28,3 +28,4 @@ htmlcov/
 
 mlruns/
 .worktrees/
+.opencode/
