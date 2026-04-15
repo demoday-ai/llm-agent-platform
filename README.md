@@ -14,15 +14,26 @@
 
 API-шлюз для LLM-запросов с балансировкой нагрузки, реестром агентов, guardrails и телеметрией.
 
-Платформа предоставляет OpenAI-совместимый эндпоинт `/v1/chat/completions`, за которым стоит пул из 6 LLM-провайдеров (через OpenRouter) с интеллектуальной маршрутизацией.
+Платформа предоставляет OpenAI-совместимые эндпоинты `/v1/chat/completions` и `/v1/embeddings`, за которыми стоит пул из 7 LLM-провайдеров (через OpenRouter) с интеллектуальной маршрутизацией.
+
+### Развернутые сервисы (85.198.96.191)
+
+| Сервис | URL |
+|--------|-----|
+| Platform API | http://85.198.96.191:8000 |
+| Grafana (метрики) | http://85.198.96.191:3002 (admin/admin) |
+| Prometheus | http://85.198.96.191:9090 |
+| Langfuse (трейсы) | http://85.198.96.191:3001 |
+
+Подключенный агент: [eventai-agent](https://github.com/demoday-ai/eventai-agent) (Telegram-бот [@demoday_ai_talent_hub_test_bot](https://t.me/demoday_ai_talent_hub_test_bot))
 
 Возможности:
-- Проксирование запросов к LLM с поддержкой streaming (SSE)
+- Проксирование запросов к LLM: chat completions (streaming SSE) + embeddings
 - Балансировка нагрузки: round-robin, latency-based (EMA), health-aware фильтрация
 - Circuit breaker на уровне провайдера
 - A2A Agent Registry с Agent Card и токенами
 - Guardrails: детекция prompt injection, маскирование секретов в ответах
-- Авторизация: master-токен (полный доступ) + agent-токены (только `/v1/chat/completions`)
+- Авторизация: master-токен (полный доступ) + agent-токены (`/v1/chat/completions`, `/v1/embeddings`)
 - Телеметрия: OpenTelemetry tracing, Prometheus метрики, Grafana дашборды, Langfuse трассировка
 - Три демо-агента: Profile, Curator (tool use), Utility
 
