@@ -67,32 +67,20 @@ def trace_llm_call(
         trace = client.trace(
             name="llm-call",
             session_id=session_id,
-            input={"messages": messages, "model": model},
-            output={"content": response},
             metadata={"provider": provider},
         )
 
-        span = trace.span(
-            name="llm-request",
-            input={"model": model, "messages": messages},
-            output={"content": response},
-            metadata={
-                "duration_s": duration,
-                "tokens_in": tokens_in,
-                "tokens_out": tokens_out,
-                "cost_usd": cost,
-                "provider": provider,
+        trace.generation(
+            name="chat-completion",
+            model=model,
+            input=messages,
+            output=response,
+            usage={
+                "input": tokens_in,
+                "output": tokens_out,
+                "total": tokens_in + tokens_out,
             },
-        )
-
-        span.event(
-            name="llm-response",
-            metadata={
-                "tokens_in": tokens_in,
-                "tokens_out": tokens_out,
-                "cost_usd": cost,
-                "duration_s": duration,
-            },
+            metadata={"provider": provider, "duration_s": duration},
         )
     except Exception:
         logger.warning("Failed to send trace to Langfuse", exc_info=True)
@@ -116,19 +104,19 @@ def trace_embedding_call(
         input_preview = input_text[:200] if isinstance(input_text, str) else str(input_text[:2])[:200]
         trace = client.trace(
             name="embedding-call",
-            input={"input": input_preview, "model": model},
-            output={"dimensions": dimensions},
             metadata={"provider": provider},
         )
-        trace.span(
-            name="embedding-request",
-            input={"model": model},
-            metadata={
-                "duration_s": duration,
-                "tokens": tokens,
-                "dimensions": dimensions,
-                "provider": provider,
+
+        trace.generation(
+            name="embedding",
+            model=model,
+            input=input_preview,
+            output={"dimensions": dimensions},
+            usage={
+                "input": tokens,
+                "total": tokens,
             },
+            metadata={"provider": provider, "duration_s": duration, "dimensions": dimensions},
         )
     except Exception:
         logger.warning("Failed to send embedding trace to Langfuse", exc_info=True)
