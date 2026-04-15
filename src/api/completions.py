@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
@@ -57,6 +58,7 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
     api_key = provider.api_key or settings.OPENROUTER_API_KEY
     client = OpenRouterClient(base_url=provider.base_url, api_key=api_key)
     t_start = time.monotonic()
+    dt_start = datetime.now(timezone.utc)
 
     kwargs = {}
     for field in ("temperature", "max_tokens", "top_p", "frequency_penalty",
@@ -99,6 +101,7 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
         )
 
     await client.close()
+    dt_end = datetime.now(timezone.utc)
     duration = time.monotonic() - t_start
     response_content: dict = result  # type: ignore[assignment]
 
@@ -114,6 +117,8 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
         tokens_out=usage.get("completion_tokens", 0),
         cost=usage.get("cost", 0),
         provider=provider.name,
+        start_time=dt_start,
+        end_time=dt_end,
     )
 
     text = _extract_response_text(response_content)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -31,6 +32,7 @@ async def embeddings(request: EmbeddingRequest) -> JSONResponse:
     api_key = provider.api_key or settings.OPENROUTER_API_KEY
     client = OpenRouterClient(base_url=provider.base_url, api_key=api_key)
     t_start = time.monotonic()
+    dt_start = datetime.now(timezone.utc)
 
     try:
         result = await client.embedding(
@@ -55,6 +57,7 @@ async def embeddings(request: EmbeddingRequest) -> JSONResponse:
         raise HTTPException(status_code=502, detail="Cannot connect to upstream") from exc
 
     await client.close()
+    dt_end = datetime.now(timezone.utc)
     duration = time.monotonic() - t_start
 
     llm_embedding_requests_total.labels(
@@ -75,6 +78,8 @@ async def embeddings(request: EmbeddingRequest) -> JSONResponse:
         duration=duration,
         tokens=usage.get("total_tokens", 0),
         provider=provider.name,
+        start_time=dt_start,
+        end_time=dt_end,
     )
 
     return JSONResponse(content=result)
