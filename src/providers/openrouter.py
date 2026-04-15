@@ -88,6 +88,25 @@ class OpenRouterClient:
                 if line:
                     yield f"{line}\n\n".encode()
 
+    async def embedding(
+        self,
+        input_text: str | list[str],
+        model: str,
+    ) -> dict[str, Any]:
+        """Send embedding request to OpenRouter. Returns parsed JSON response."""
+        payload: dict[str, Any] = {
+            "model": model,
+            "input": input_text,
+        }
+        response = await self._client.post(
+            "/embeddings",
+            json=payload,
+            headers=self._headers(),
+        )
+        _raise_for_upstream_status(response)
+        result: dict[str, Any] = response.json()
+        return result
+
     async def close(self) -> None:
         await self._client.aclose()
 

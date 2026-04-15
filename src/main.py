@@ -6,6 +6,7 @@ from fastapi.openapi.utils import get_openapi
 
 from src.api.agents import router as agents_router
 from src.api.completions import router as completions_router
+from src.api.embeddings import router as embeddings_router
 from src.api.metrics_endpoint import router as metrics_router
 from src.api.providers import router as providers_router
 from src.auth.middleware import AuthMiddleware
@@ -43,6 +44,7 @@ app = FastAPI(
 app.add_middleware(AuthMiddleware)
 app.add_middleware(TracingMiddleware)
 app.include_router(completions_router)
+app.include_router(embeddings_router)
 app.include_router(metrics_router)
 app.include_router(agents_router)
 app.include_router(providers_router)

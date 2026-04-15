@@ -12,6 +12,13 @@ class Message(BaseModel):
     content: str | None = None
 
 
+class EmbeddingRequest(BaseModel):
+    model_config = {"extra": "allow"}
+
+    model: str
+    input: str | list[str]
+
+
 class ChatCompletionRequest(BaseModel):
     model_config = {"extra": "allow"}
 

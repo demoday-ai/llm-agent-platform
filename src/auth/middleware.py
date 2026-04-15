@@ -26,6 +26,7 @@ PUBLIC_PATHS: frozenset[str] = frozenset({
 
 AGENT_ALLOWED_PREFIXES: tuple[str, ...] = (
     "/v1/chat/completions",
+    "/v1/embeddings",
 )
 
 

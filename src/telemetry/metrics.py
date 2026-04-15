@@ -59,3 +59,17 @@ llm_tpot_seconds = Histogram(
     "Time per output token",
     ["model", "provider"],
 )
+
+# ── Embedding metrics ──────────────────────────────────────
+
+llm_embedding_requests_total = Counter(
+    "llm_embedding_requests_total",
+    "Total embedding requests",
+    ["model", "provider", "status_code"],
+)
+
+llm_embedding_duration_seconds = Histogram(
+    "llm_embedding_duration_seconds",
+    "Embedding request duration in seconds",
+    ["model", "provider"],
+)

@@ -29,6 +29,9 @@ class PromptInjectionGuardrail(Guardrail):
 
     async def check_request(self, messages: list[dict]) -> GuardrailResult:
         for msg in messages:
+            # Only check user messages - system prompts may legitimately mention injection patterns
+            if msg.get("role") != "user":
+                continue
             content = msg.get("content", "")
             if not isinstance(content, str):
                 continue

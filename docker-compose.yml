@@ -15,6 +15,7 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks: [eventai-net]
 
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -24,11 +25,12 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     restart: unless-stopped
+    networks: [eventai-net]
 
   grafana:
     image: grafana/grafana:11.3.0
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
@@ -36,6 +38,7 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
     restart: unless-stopped
+    networks: [eventai-net]
 
   langfuse:
     image: langfuse/langfuse:2
@@ -47,7 +50,6 @@ services:
       NEXTAUTH_URL: ${LANGFUSE_NEXTAUTH_URL:-http://localhost:3001}
       SALT: ${LANGFUSE_SALT:-change-me-salt}
       TELEMETRY_ENABLED: "false"
-      # Auto-seed org, project, user and API keys on first start
       LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-seed-org-id}
       LANGFUSE_INIT_ORG_NAME: ${LANGFUSE_INIT_ORG_NAME:-LLM Agent Platform}
       LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_INIT_PROJECT_ID:-seed-project-id}
@@ -61,6 +63,7 @@ services:
       langfuse-db:
         condition: service_healthy
     restart: unless-stopped
+    networks: [eventai-net]
 
   langfuse-db:
     image: postgres:16-alpine
@@ -76,59 +79,13 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-  profile-agent:
-    build:
-      context: .
-      dockerfile: agents/profile_agent/Dockerfile
-    ports:
-      - "8001:8001"
-    environment:
-      PLATFORM_URL: http://app:8000
-      MASTER_TOKEN: ${MASTER_TOKEN}
-      LANGFUSE_HOST: http://langfuse:3000
-      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
-      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
-    depends_on:
-      app:
-        condition: service_healthy
-    restart: unless-stopped
-
-  curator-agent:
-    build:
-      context: .
-      dockerfile: agents/curator_agent/Dockerfile
-    ports:
-      - "8002:8002"
-    environment:
-      PLATFORM_URL: http://app:8000
-      MASTER_TOKEN: ${MASTER_TOKEN}
-      LANGFUSE_HOST: http://langfuse:3000
-      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
-      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
-    depends_on:
-      app:
-        condition: service_healthy
-    restart: unless-stopped
-
-  utility-agent:
-    build:
-      context: .
-      dockerfile: agents/utility_agent/Dockerfile
-    ports:
-      - "8003:8003"
-    environment:
-      PLATFORM_URL: http://app:8000
-      MASTER_TOKEN: ${MASTER_TOKEN}
-      LANGFUSE_HOST: http://langfuse:3000
-      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
-      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
-    depends_on:
-      app:
-        condition: service_healthy
-    restart: unless-stopped
+    networks: [eventai-net]
 
 volumes:
   prometheus_data:
   grafana_data:
   langfuse_db_data:
+
+networks:
+  eventai-net:
+    external: true

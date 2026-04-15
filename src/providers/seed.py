@@ -23,7 +23,7 @@ SEED_PROVIDERS: list[Provider] = [
     Provider(
         name="DeepSeek V3.2",
         base_url=OPENROUTER_BASE,
-        models=["deepseek/deepseek-chat"],
+        models=["deepseek/deepseek-chat", "deepseek/deepseek-v3.2"],
         weight=1.0,
     ),
     Provider(
@@ -42,6 +42,12 @@ SEED_PROVIDERS: list[Provider] = [
         name="Google Gemini 2.5 Flash Lite",
         base_url=OPENROUTER_BASE,
         models=["google/gemini-2.5-flash-lite"],
+        weight=1.0,
+    ),
+    Provider(
+        name="Google Gemini Embedding 001",
+        base_url=OPENROUTER_BASE,
+        models=["google/gemini-embedding-001"],
         weight=1.0,
     ),
 ]
